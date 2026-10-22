@@ -22,7 +22,23 @@ Resources:
             Path: /hello
             Method: get
 
+  GetUnitsHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.cloudstore.handlers.GetUnitsHandler::handleRequest
+      Events:
+        GetUnitsApi:
+          Type: Api
+          Properties:
+            Path: /units
+            Method: get
+
 Outputs:
   HelloApi:
     Description: "API Gateway endpoint URL for Prod stage for Hello function"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+
+  GetUnitsApi:
+    Description: "API Gateway endpoint URL for retrieving storage units"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/units/"
