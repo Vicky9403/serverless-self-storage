@@ -38,6 +38,4 @@ The application will allow users to register, log in, and manage their own self-
 
 Planning and initial setup.
 
-## Author
-
-Vicky
+WTC-EG3B6BZH
