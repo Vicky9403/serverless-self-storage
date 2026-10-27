@@ -48,7 +48,6 @@ Resources:
     Properties:
       StageName: Prod
       Auth:
-        DefaultAuthorizer: NONE
         Authorizers:
           CognitoAuthorizer:
             UserPoolArn: !GetAtt StorageUserPool.Arn
@@ -89,4 +88,4 @@ Outputs:
 
   GetUnitsApi:
     Description: "API Gateway endpoint URL for retrieving storage units"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/units/"
+    Value: !Sub "https://${CloudStoreApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/units/"
