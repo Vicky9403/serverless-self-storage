@@ -5,9 +5,10 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.cloudstore.models.StorageUnit;
+import com.cloudstore.repositories.DynamoDbStorageUnitRepository;
+import com.cloudstore.repositories.StorageUnitRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,21 @@ import java.util.Map;
 public class GetUnitsHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final StorageUnitRepository repository;
+
+    /**
+     * Default constructor used by AWS Lambda.
+     */
+    public GetUnitsHandler() {
+        this.repository = new DynamoDbStorageUnitRepository();
+    }
+
+    /**
+     * Constructor for testing.
+     */
+    public GetUnitsHandler(StorageUnitRepository repository) {
+        this.repository = repository;
+    }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
@@ -25,11 +41,8 @@ public class GetUnitsHandler implements RequestHandler<APIGatewayProxyRequestEve
         headers.put("Content-Type", "application/json");
 
         try {
-            // Hardcoded data for Step 1
-            List<StorageUnit> units = new ArrayList<>();
-            units.add(new StorageUnit("1", "Unit A", "Small", 50.0, true));
-            units.add(new StorageUnit("2", "Unit B", "Medium", 100.0, true));
-            units.add(new StorageUnit("3", "Unit C", "Large", 150.0, false));
+            // Fetch data from Repository
+            List<StorageUnit> units = repository.getAllUnits();
 
             String body = objectMapper.writeValueAsString(units);
 
@@ -39,6 +52,7 @@ public class GetUnitsHandler implements RequestHandler<APIGatewayProxyRequestEve
                     .withBody(body);
 
         } catch (Exception e) {
+            context.getLogger().log("Error fetching units: " + e.getMessage());
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(500)
                     .withHeaders(headers)

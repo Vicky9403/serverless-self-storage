@@ -1,8 +1,12 @@
 package com.cloudstore.models;
 
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+
 /**
  * Represents a self-storage unit.
  */
+@DynamoDbBean
 public class StorageUnit {
     private String id;
     private String name;
@@ -10,7 +14,7 @@ public class StorageUnit {
     private double price;
     private boolean available;
 
-    // Default constructor for Jackson
+    // Default constructor for Jackson and DynamoDB Enhanced Client
     public StorageUnit() {}
 
     public StorageUnit(String id, String name, String size, double price, boolean available) {
@@ -22,6 +26,7 @@ public class StorageUnit {
     }
 
     // Getters and Setters
+    @DynamoDbPartitionKey
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 

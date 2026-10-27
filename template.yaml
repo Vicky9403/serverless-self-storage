@@ -27,12 +27,60 @@ Resources:
     Properties:
       CodeUri: .
       Handler: com.cloudstore.handlers.GetUnitsHandler::handleRequest
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref StorageUnitsTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref StorageUnitsTable
       Events:
         GetUnitsApi:
           Type: Api
           Properties:
             Path: /units
             Method: get
+            RestApiId: !Ref CloudStoreApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  CloudStoreApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        DefaultAuthorizer: NONE
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt StorageUserPool.Arn
+
+  StorageUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: CloudStoreUserPool
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+
+  StorageUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: CloudStoreUserPoolClient
+      UserPoolId: !Ref StorageUserPool
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+
+  StorageUnitsTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: id
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
 
 Outputs:
   HelloApi:
