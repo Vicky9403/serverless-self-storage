@@ -10,6 +10,8 @@ import com.cloudstore.repositories.BookingRepository;
 import com.cloudstore.repositories.DynamoDbBookingRepository;
 import com.cloudstore.repositories.DynamoDbStorageUnitRepository;
 import com.cloudstore.repositories.StorageUnitRepository;
+import com.cloudstore.services.NotificationService;
+import com.cloudstore.services.SnsNotificationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
@@ -23,15 +25,20 @@ public class CreateBookingHandler implements RequestHandler<APIGatewayProxyReque
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final BookingRepository bookingRepository;
     private final StorageUnitRepository storageUnitRepository;
+    private final NotificationService notificationService;
 
     public CreateBookingHandler() {
-        this.bookingRepository = new DynamoDbBookingRepository();
-        this.storageUnitRepository = new DynamoDbStorageUnitRepository();
+        this(new DynamoDbBookingRepository(), new DynamoDbStorageUnitRepository(), new SnsNotificationService());
     }
 
     public CreateBookingHandler(BookingRepository bookingRepository, StorageUnitRepository storageUnitRepository) {
+        this(bookingRepository, storageUnitRepository, new SnsNotificationService());
+    }
+
+    public CreateBookingHandler(BookingRepository bookingRepository, StorageUnitRepository storageUnitRepository, NotificationService notificationService) {
         this.bookingRepository = bookingRepository;
         this.storageUnitRepository = storageUnitRepository;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -89,6 +96,17 @@ public class CreateBookingHandler implements RequestHandler<APIGatewayProxyReque
 
             // Save booking
             bookingRepository.save(booking);
+
+            // Send notification
+            try {
+                if (notificationService != null) {
+                    notificationService.notifyBookingCreated(booking);
+                }
+            } catch (Exception e) {
+                if (context != null && context.getLogger() != null) {
+                    context.getLogger().log("Error sending booking creation notification: " + e.getMessage());
+                }
+            }
 
             String responseBody = objectMapper.writeValueAsString(booking);
             return new APIGatewayProxyResponseEvent()

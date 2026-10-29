@@ -17,9 +17,9 @@ The project is being developed step by step, with an emphasis on simplicity, tes
 - [x] API Gateway configuration
 - [x] Unit tests passing
 - [x] AWS SAM template validation
-- [ ] Booking functionality
-- [ ] S3 file storage
-- [ ] SNS notifications
+- [x] Booking functionality
+- [x] S3 file storage
+- [x] SNS notifications
 - [ ] Frontend using S3 and CloudFront
 - [ ] Deployment and live AWS testing
 
@@ -33,7 +33,9 @@ The project is being developed step by step, with an emphasis on simplicity, tes
 | Maven | Dependency management and build tool |
 | AWS Lambda | Serverless backend functions |
 | Amazon API Gateway | HTTP API endpoints |
-| Amazon DynamoDB | NoSQL storage for storage-unit data |
+| Amazon DynamoDB | NoSQL storage for storage-unit and booking data |
+| Amazon S3 | Secure object storage with pre-signed URLs |
+| Amazon SNS | Notification service for booking lifecycle events |
 | Amazon Cognito | User authentication configuration |
 | AWS SAM | Serverless application configuration and deployment |
 | JUnit 5 | Unit testing |
@@ -72,11 +74,32 @@ The table uses `id` as its string partition key.
 
 The AWS SAM template defines an Amazon Cognito User Pool and a User Pool Client.
 
-The `/units` endpoint is configured to use the Cognito authorizer. Live authentication has not yet been verified against a deployed API.
+The `/units`, `/bookings`, and `/files` endpoints are configured to use the Cognito authorizer. Live authentication has not yet been verified against a deployed API.
+
+### 5. Booking API
+
+Lambda handlers for managing storage-unit reservations:
+- **POST `/bookings`**: Book an available unit.
+- **GET `/bookings`**: Retrieve bookings for the authenticated user.
+- **DELETE `/bookings/{id}`**: Cancel a booking and release the unit.
+
+### 6. S3 File Storage API
+
+Lambda handlers for secure customer file uploads and downloads using S3 pre-signed URLs:
+- **POST `/files/upload` (and `/files`)**: Generate a secure pre-signed PUT URL to upload a file directly to S3.
+- **GET `/files/{fileName}`**: Generate a secure pre-signed GET URL to download/retrieve a stored file from S3.
+- **Security & Data Isolation**: Customer files are partitioned by user ID (`{userId}/{fileName}`) in an encrypted S3 bucket with public access blocked and path traversal sanitization.
+
+### 7. SNS Booking Notifications
+
+Notification service publishing to Amazon SNS:
+- **Booking Created**: Publishes a confirmation event notification when a booking is created.
+- **Booking Cancelled**: Publishes a cancellation event notification when a booking is cancelled.
+- **Fault-Tolerant Execution**: Notifications are decoupled from core database operations to ensure that transient notification errors do not abort booking creation or cancellation.
 
 ## Project Structure
 
-The main application code is organised into handlers, models, and repositories.
+The main application code is organised into handlers, models, repositories, and services.
 
 ```text
 serverless-self-storage/
@@ -87,17 +110,42 @@ serverless-self-storage/
 │   │           └── cloudstore/
 │   │               ├── handlers/
 │   │               │   ├── HelloHandler.java
-│   │               │   └── GetUnitsHandler.java
+│   │               │   ├── GetUnitsHandler.java
+│   │               │   ├── CreateBookingHandler.java
+│   │               │   ├── GetBookingsHandler.java
+│   │               │   ├── CancelBookingHandler.java
+│   │               │   ├── UploadFileHandler.java
+│   │               │   └── GetFileHandler.java
 │   │               ├── models/
-│   │               │   └── StorageUnit.java
-│   │               └── repositories/
-│   │                   └── DynamoDbStorageUnitRepository.java
+│   │               │   ├── StorageUnit.java
+│   │               │   └── Booking.java
+│   │               ├── repositories/
+│   │                   ├── StorageUnitRepository.java
+│   │                   ├── DynamoDbStorageUnitRepository.java
+│   │                   ├── BookingRepository.java
+│   │                   ├── DynamoDbBookingRepository.java
+│   │                   ├── FileRepository.java
+│   │                   └── S3FileRepository.java
+│   │               └── services/
+│   │                   ├── NotificationService.java
+│   │                   └── SnsNotificationService.java
 │   └── test/
 │       └── java/
 │           └── com/
 │               └── cloudstore/
 │                   ├── handlers/
-│                   └── repositories/
+│                   │   ├── HelloHandlerTest.java
+│                   │   ├── GetUnitsHandlerTest.java
+│                   │   ├── CreateBookingHandlerTest.java
+│                   │   ├── GetBookingsHandlerTest.java
+│                   │   ├── CancelBookingHandlerTest.java
+│                   │   ├── UploadFileHandlerTest.java
+│                   │   └── GetFileHandlerTest.java
+│                   ├── repositories/
+│                   │   ├── DynamoDbStorageUnitRepositoryTest.java
+│                   │   └── S3FileRepositoryTest.java
+│                   └── services/
+│                       └── SnsNotificationServiceTest.java
 ├── template.yaml
 ├── pom.xml
 └── README.md
@@ -131,9 +179,7 @@ Run the automated tests:
 mvn clean test
 ```
 
-The current test suite contains four tests covering the Lambda handlers and DynamoDB repository.
-
-**Latest verified result:** 4 tests run, 0 failures, 0 errors.
+**Latest verified result:** 31 tests run, 0 failures, 0 errors.
 
 ## Validating the AWS SAM Template
 
@@ -169,9 +215,9 @@ The next development stages are:
 
 1. Complete and verify Cognito authentication.
 2. Expand storage-unit functionality.
-3. Implement storage-unit booking.
-4. Add S3 file storage.
-5. Add SNS notifications.
+3. [Completed] Implement storage-unit booking.
+4. [Completed] Add S3 file storage.
+5. [Completed] Add SNS notifications.
 6. Develop a frontend hosted with S3 and CloudFront.
 7. Deploy and test the complete application on AWS.
 

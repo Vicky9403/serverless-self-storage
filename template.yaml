@@ -53,11 +53,14 @@ Resources:
         Variables:
           BOOKINGS_TABLE_NAME: !Ref BookingsTable
           TABLE_NAME: !Ref StorageUnitsTable
+          BOOKING_TOPIC_ARN: !Ref BookingNotificationTopic
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref BookingsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref StorageUnitsTable
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt BookingNotificationTopic.TopicName
       Events:
         CreateBookingApi:
           Type: Api
@@ -98,17 +101,70 @@ Resources:
         Variables:
           BOOKINGS_TABLE_NAME: !Ref BookingsTable
           TABLE_NAME: !Ref StorageUnitsTable
+          BOOKING_TOPIC_ARN: !Ref BookingNotificationTopic
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref BookingsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref StorageUnitsTable
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt BookingNotificationTopic.TopicName
       Events:
         CancelBookingApi:
           Type: Api
           Properties:
             Path: /bookings/{id}
             Method: delete
+            RestApiId: !Ref CloudStoreApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  UploadFileHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.cloudstore.handlers.UploadFileHandler::handleRequest
+      Environment:
+        Variables:
+          FILES_BUCKET_NAME: !Ref FilesBucket
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref FilesBucket
+      Events:
+        UploadFileApi:
+          Type: Api
+          Properties:
+            Path: /files/upload
+            Method: post
+            RestApiId: !Ref CloudStoreApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+        UploadFileRootApi:
+          Type: Api
+          Properties:
+            Path: /files
+            Method: post
+            RestApiId: !Ref CloudStoreApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  GetFileHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.cloudstore.handlers.GetFileHandler::handleRequest
+      Environment:
+        Variables:
+          FILES_BUCKET_NAME: !Ref FilesBucket
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref FilesBucket
+      Events:
+        GetFileApi:
+          Type: Api
+          Properties:
+            Path: /files/{fileName}
+            Method: get
             RestApiId: !Ref CloudStoreApi
             Auth:
               Authorizer: CognitoAuthorizer
@@ -171,6 +227,35 @@ Resources:
           Projection:
             ProjectionType: ALL
 
+  FilesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - HEAD
+            AllowedOrigins:
+              - '*'
+            MaxAge: 3000
+
+  BookingNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: CloudStore Booking Notifications
+
 Outputs:
   HelloApi:
     Description: "API Gateway endpoint URL for Prod stage for Hello function"
@@ -187,3 +272,19 @@ Outputs:
   GetBookingsApi:
     Description: "API Gateway endpoint URL for retrieving bookings"
     Value: !Sub "https://${CloudStoreApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/bookings/"
+
+  UploadFileApi:
+    Description: "API Gateway endpoint URL for uploading files"
+    Value: !Sub "https://${CloudStoreApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/files/upload"
+
+  GetFileApi:
+    Description: "API Gateway endpoint URL for retrieving files"
+    Value: !Sub "https://${CloudStoreApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/files/{fileName}"
+
+  FilesBucketName:
+    Description: "Name of the S3 bucket used for customer file storage"
+    Value: !Ref FilesBucket
+
+  BookingNotificationTopicArn:
+    Description: "ARN of the SNS topic for booking notifications"
+    Value: !Ref BookingNotificationTopic

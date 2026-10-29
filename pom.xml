@@ -51,6 +51,18 @@
             <artifactId>dynamodb-enhanced</artifactId>
         </dependency>
 
+        <!-- AWS S3 Client & Presigner -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+
+        <!-- AWS SNS Client -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sns</artifactId>
+        </dependency>
+
         <!-- JUnit 5 for Testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>

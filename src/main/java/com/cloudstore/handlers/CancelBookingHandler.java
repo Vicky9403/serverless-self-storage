@@ -10,6 +10,8 @@ import com.cloudstore.repositories.BookingRepository;
 import com.cloudstore.repositories.DynamoDbBookingRepository;
 import com.cloudstore.repositories.DynamoDbStorageUnitRepository;
 import com.cloudstore.repositories.StorageUnitRepository;
+import com.cloudstore.services.NotificationService;
+import com.cloudstore.services.SnsNotificationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
@@ -21,15 +23,20 @@ public class CancelBookingHandler implements RequestHandler<APIGatewayProxyReque
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final BookingRepository bookingRepository;
     private final StorageUnitRepository storageUnitRepository;
+    private final NotificationService notificationService;
 
     public CancelBookingHandler() {
-        this.bookingRepository = new DynamoDbBookingRepository();
-        this.storageUnitRepository = new DynamoDbStorageUnitRepository();
+        this(new DynamoDbBookingRepository(), new DynamoDbStorageUnitRepository(), new SnsNotificationService());
     }
 
     public CancelBookingHandler(BookingRepository bookingRepository, StorageUnitRepository storageUnitRepository) {
+        this(bookingRepository, storageUnitRepository, new SnsNotificationService());
+    }
+
+    public CancelBookingHandler(BookingRepository bookingRepository, StorageUnitRepository storageUnitRepository, NotificationService notificationService) {
         this.bookingRepository = bookingRepository;
         this.storageUnitRepository = storageUnitRepository;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -87,6 +94,17 @@ public class CancelBookingHandler implements RequestHandler<APIGatewayProxyReque
                 StorageUnit unit = unitOpt.get();
                 unit.setAvailable(true);
                 storageUnitRepository.update(unit);
+            }
+
+            // Send notification
+            try {
+                if (notificationService != null) {
+                    notificationService.notifyBookingCancelled(booking);
+                }
+            } catch (Exception e) {
+                if (context != null && context.getLogger() != null) {
+                    context.getLogger().log("Error sending booking cancellation notification: " + e.getMessage());
+                }
             }
 
             return new APIGatewayProxyResponseEvent()
