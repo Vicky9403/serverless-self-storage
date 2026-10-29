@@ -44,6 +44,75 @@ Resources:
             Auth:
               Authorizer: CognitoAuthorizer
 
+  CreateBookingHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.cloudstore.handlers.CreateBookingHandler::handleRequest
+      Environment:
+        Variables:
+          BOOKINGS_TABLE_NAME: !Ref BookingsTable
+          TABLE_NAME: !Ref StorageUnitsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BookingsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref StorageUnitsTable
+      Events:
+        CreateBookingApi:
+          Type: Api
+          Properties:
+            Path: /bookings
+            Method: post
+            RestApiId: !Ref CloudStoreApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  GetBookingsHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.cloudstore.handlers.GetBookingsHandler::handleRequest
+      Environment:
+        Variables:
+          BOOKINGS_TABLE_NAME: !Ref BookingsTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BookingsTable
+      Events:
+        GetBookingsApi:
+          Type: Api
+          Properties:
+            Path: /bookings
+            Method: get
+            RestApiId: !Ref CloudStoreApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  CancelBookingHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.cloudstore.handlers.CancelBookingHandler::handleRequest
+      Environment:
+        Variables:
+          BOOKINGS_TABLE_NAME: !Ref BookingsTable
+          TABLE_NAME: !Ref StorageUnitsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BookingsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref StorageUnitsTable
+      Events:
+        CancelBookingApi:
+          Type: Api
+          Properties:
+            Path: /bookings/{id}
+            Method: delete
+            RestApiId: !Ref CloudStoreApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+
   CloudStoreApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -82,6 +151,26 @@ Resources:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
 
+  BookingsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: UserIdIndex
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
 Outputs:
   HelloApi:
     Description: "API Gateway endpoint URL for Prod stage for Hello function"
@@ -90,3 +179,11 @@ Outputs:
   GetUnitsApi:
     Description: "API Gateway endpoint URL for retrieving storage units"
     Value: !Sub "https://${CloudStoreApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/units/"
+
+  CreateBookingApi:
+    Description: "API Gateway endpoint URL for creating a booking"
+    Value: !Sub "https://${CloudStoreApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/bookings/"
+
+  GetBookingsApi:
+    Description: "API Gateway endpoint URL for retrieving bookings"
+    Value: !Sub "https://${CloudStoreApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/bookings/"

@@ -7,6 +7,7 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class DynamoDbStorageUnitRepository implements StorageUnitRepository {
@@ -30,5 +31,15 @@ public class DynamoDbStorageUnitRepository implements StorageUnitRepository {
     public List<StorageUnit> getAllUnits() {
         return storageUnitTable.scan().items().stream()
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Optional<StorageUnit> getById(String id) {
+        return Optional.ofNullable(storageUnitTable.getItem(r -> r.key(k -> k.partitionValue(id))));
+    }
+
+    @Override
+    public void update(StorageUnit unit) {
+        storageUnitTable.updateItem(unit);
     }
 }
