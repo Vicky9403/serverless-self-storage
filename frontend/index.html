@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudStore — Serverless Self-Storage</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <!-- Fullscreen Authentication Gate (shown when unauthenticated) -->
+    <div id="auth-gate" class="auth-gate active">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <div class="brand-icon">
+                    <svg viewBox="0 0 24 24"><path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25M8 16h.01M8 20h.01M12 18h.01M12 22h.01M16 16h.01M16 20h.01"/></svg>
+                </div>
+                <h2>CloudStore</h2>
+                <p>Serverless Self-Storage Platform</p>
+            </div>
+
+            <!-- Auth Tabs -->
+            <div class="tab-nav">
+                <button class="tab-btn active" id="tab-login-btn" onclick="showAuthTab('login')">Sign In</button>
+                <button class="tab-btn" id="tab-register-btn" onclick="showAuthTab('register')">Register</button>
+                <button class="tab-btn" id="tab-verify-btn" onclick="showAuthTab('verify')">Verify Code</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label" for="login-email">Email Address</label>
+                    <input type="email" id="login-email" class="form-control" placeholder="user@example.com" required value="demo@cloudstore.io">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="login-password">Password</label>
+                    <input type="password" id="login-password" class="form-control" placeholder="••••••••" required value="CloudStore123!">
+                    <span class="form-text">Cognito requires 8+ chars, upper, lower, number.</span>
+                </div>
+                <button type="submit" id="login-submit-btn" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+                    Sign In
+                </button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-form" style="display: none;" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label class="form-label" for="reg-email">Email Address</label>
+                    <input type="email" id="reg-email" class="form-control" placeholder="newuser@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="reg-password">Password</label>
+                    <input type="password" id="reg-password" class="form-control" placeholder="••••••••" required>
+                    <span class="form-text">Min 8 characters with numbers and symbols.</span>
+                </div>
+                <button type="submit" id="reg-submit-btn" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+                    Create Account
+                </button>
+            </form>
+
+            <!-- Verify Code Form -->
+            <form id="verify-form" style="display: none;" onsubmit="handleVerify(event)">
+                <div class="form-group">
+                    <label class="form-label" for="verify-email">Email Address</label>
+                    <input type="email" id="verify-email" class="form-control" placeholder="user@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="verify-code">Verification Code</label>
+                    <input type="text" id="verify-code" class="form-control" placeholder="123456" required>
+                    <span class="form-text">Check your email for the Cognito code.</span>
+                </div>
+                <button type="submit" id="verify-submit-btn" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+                    Confirm Account
+                </button>
+            </form>
+
+            <div style="margin-top: 24px; text-align: center; border-top: 1px solid var(--grey-200); padding-top: 18px;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="openSettingsModal()">
+                    <svg style="width: 15px; height: 15px; stroke: currentColor; fill: none;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    AWS Connection Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Application -->
+    <div id="app-container">
+
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="#" class="brand">
+                    <div class="brand-icon">
+                        <svg viewBox="0 0 24 24"><path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25M8 16h.01M8 20h.01M12 18h.01M12 22h.01M16 16h.01M16 20h.01"/></svg>
+                    </div>
+                    <span>CloudStore</span>
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">Navigation</div>
+                <a class="nav-item active" data-view="dashboard" onclick="navigateTo('dashboard')">
+                    <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                    <span>Dashboard</span>
+                </a>
+                <a class="nav-item" data-view="units" onclick="navigateTo('units')">
+                    <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="m7.5 4.27 9 5.15M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg>
+                    <span>Storage Units</span>
+                </a>
+                <a class="nav-item" data-view="bookings" onclick="navigateTo('bookings')">
+                    <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg>
+                    <span>My Bookings</span>
+                </a>
+                <a class="nav-item" data-view="files" onclick="navigateTo('files')">
+                    <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6M9 15l3-3 3 3"/></svg>
+                    <span>File Storage</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span id="env-badge" class="mode-badge mock">
+                        <span class="dot"></span>
+                        <span id="env-text">Demo Mode</span>
+                    </span>
+                    <button class="btn btn-secondary btn-sm" onclick="openSettingsModal()" title="Configure AWS">
+                        ⚙️
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <!-- Topbar -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="menu-toggle-btn" onclick="toggleSidebar()">
+                        <svg style="width: 24px; height: 24px; stroke: currentColor; fill: none;" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                    </button>
+                    <h1 class="page-title" id="page-title">Dashboard</h1>
+                </div>
+
+                <div class="topbar-right">
+                    <div class="user-profile">
+                        <div class="user-avatar" id="user-avatar-initials">U</div>
+                        <div class="user-info">
+                            <span class="user-email" id="header-user-email">User</span>
+                            <span class="user-role" id="header-user-role">Customer</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="handleSignOut()">
+                        Sign Out
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dynamic Views -->
+            <main class="content-body">
+
+                <!-- 1. DASHBOARD VIEW -->
+                <section id="view-dashboard" class="view-section active">
+                    <div class="welcome-banner">
+                        <div>
+                            <h2 id="welcome-user-heading">Welcome to CloudStore</h2>
+                            <p>Manage your secure storage spaces, bookings, and inventory files in real-time.</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="navigateTo('units')">Browse Storage Units</button>
+                    </div>
+
+                    <!-- Metrics Grid -->
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-icon blue">
+                                <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>
+                            </div>
+                            <div class="metric-info">
+                                <h4>Total Units</h4>
+                                <div class="metric-value" id="stat-total-units">0</div>
+                            </div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-icon green">
+                                <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            </div>
+                            <div class="metric-info">
+                                <h4>Available Units</h4>
+                                <div class="metric-value" id="stat-available-units">0</div>
+                            </div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-icon amber">
+                                <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                            </div>
+                            <div class="metric-info">
+                                <h4>My Active Bookings</h4>
+                                <div class="metric-value" id="stat-active-bookings">0</div>
+                            </div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-icon purple">
+                                <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                            </div>
+                            <div class="metric-info">
+                                <h4>Stored Files</h4>
+                                <div class="metric-value" id="stat-stored-files">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Navigation Cards -->
+                    <div class="quick-actions-card">
+                        <h3>Quick Shortcuts</h3>
+                        <div class="quick-actions-grid">
+                            <div class="quick-action-btn" onclick="navigateTo('units')">
+                                <h5>Reserve Storage</h5>
+                                <p>View sizes, prices, and reserve an open locker.</p>
+                            </div>
+                            <div class="quick-action-btn" onclick="navigateTo('bookings')">
+                                <h5>Manage Bookings</h5>
+                                <p>Check booking status or cancel active reservations.</p>
+                            </div>
+                            <div class="quick-action-btn" onclick="navigateTo('files')">
+                                <h5>Upload Files</h5>
+                                <p>Securely store inventory lists and unit documents in S3.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Bookings Table Preview -->
+                    <div class="section-header">
+                        <div>
+                            <h3>Recent Bookings</h3>
+                            <p class="section-subtitle">Your latest storage unit reservations</p>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="navigateTo('bookings')">View All</button>
+                    </div>
+                    <div class="table-card">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Booking ID</th>
+                                    <th>Unit ID</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-bookings-tbody">
+                                <tr><td colspan="4" style="text-align: center; color: var(--navy-600);">Loading bookings...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 2. STORAGE UNITS VIEW -->
+                <section id="view-units" class="view-section">
+                    <div class="section-header">
+                        <div>
+                            <h2>Available Storage Units</h2>
+                            <p class="section-subtitle">Browse and reserve storage space tailored to your needs</p>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="loadUnits()">↻ Refresh</button>
+                    </div>
+
+                    <!-- Filter Bar -->
+                    <div class="filter-bar">
+                        <div class="filter-group">
+                            <div class="search-input-wrapper">
+                                <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                <input type="text" id="unit-search" class="search-input" placeholder="Search by name or unit ID..." oninput="filterUnits()">
+                            </div>
+                            <select id="unit-size-filter" class="select-control" onchange="filterUnits()">
+                                <option value="ALL">All Sizes</option>
+                                <option value="Small">Small Lockers</option>
+                                <option value="Medium">Medium Units</option>
+                                <option value="Large">Large Vaults</option>
+                            </select>
+                        </div>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; color: var(--navy-700);">
+                            <input type="checkbox" id="unit-avail-only" onchange="filterUnits()">
+                            Available Only
+                        </label>
+                    </div>
+
+                    <!-- Units Grid -->
+                    <div class="units-grid" id="units-grid-container">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </section>
+
+                <!-- 3. MY BOOKINGS VIEW -->
+                <section id="view-bookings" class="view-section">
+                    <div class="section-header">
+                        <div>
+                            <h2>My Bookings</h2>
+                            <p class="section-subtitle">View and manage your self-storage reservations</p>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="loadBookings()">↻ Refresh</button>
+                    </div>
+
+                    <div class="table-card">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Booking ID</th>
+                                    <th>Unit ID</th>
+                                    <th>Booking Date</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bookings-table-tbody">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 4. FILE STORAGE VIEW -->
+                <section id="view-files" class="view-section">
+                    <div class="section-header">
+                        <div>
+                            <h2>S3 File Storage</h2>
+                            <p class="section-subtitle">Upload and retrieve customer documents and storage photos securely</p>
+                        </div>
+                    </div>
+
+                    <!-- Drag & Drop Upload Zone -->
+                    <div class="file-upload-card" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                        <input type="file" id="file-input" class="file-input-hidden" onchange="handleFileSelected(this.files)">
+                        <div class="upload-icon">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                        </div>
+                        <h3 style="margin-bottom: 6px;">Click or drag file to upload</h3>
+                        <p style="font-size: 0.85rem;">Securely uploaded directly to Amazon S3 via pre-signed URL</p>
+
+                        <!-- Progress Bar -->
+                        <div class="upload-progress-container" id="upload-progress-box">
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" id="upload-progress-fill"></div>
+                            </div>
+                            <div class="progress-text">
+                                <span id="upload-progress-filename">Uploading...</span>
+                                <span id="upload-progress-percent">0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Uploaded Files Table -->
+                    <div class="section-header" style="margin-top: 10px;">
+                        <h3>Stored Files</h3>
+                        <button class="btn btn-secondary btn-sm" onclick="renderUserFiles()">↻ Refresh</button>
+                    </div>
+                    <div class="table-card">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>File Name</th>
+                                    <th>Size</th>
+                                    <th>Upload Date</th>
+                                    <th style="text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="files-table-tbody">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Booking Confirmation Modal -->
+    <div id="booking-modal" class="modal-backdrop">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h4 class="modal-title">Confirm Storage Booking</h4>
+                <button class="modal-close-btn" onclick="closeModal('booking-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>You are about to book the following storage space:</p>
+                <div style="background: var(--grey-50); border: 1px solid var(--grey-200); border-radius: var(--radius-md); padding: 16px; margin: 16px 0;">
+                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--navy-900);" id="modal-book-unit-name">Unit</div>
+                    <div style="color: var(--navy-600); font-size: 0.88rem; margin-top: 4px;">Unit ID: <span id="modal-book-unit-id" class="code-badge">...</span></div>
+                    <div style="font-size: 1.25rem; font-weight: 800; color: var(--blue-600); margin-top: 10px;" id="modal-book-unit-price">$0/mo</div>
+                </div>
+                <p style="font-size: 0.84rem; color: var(--navy-600);">Upon confirmation, the unit availability will be updated and an SNS notification will be issued.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('booking-modal')">Cancel</button>
+                <button class="btn btn-primary" id="confirm-booking-btn" onclick="executeBooking()">Confirm Booking</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancellation Confirmation Modal -->
+    <div id="cancel-modal" class="modal-backdrop">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h4 class="modal-title">Cancel Booking</h4>
+                <button class="modal-close-btn" onclick="closeModal('cancel-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel booking <strong id="modal-cancel-booking-id">...</strong>?</p>
+                <p style="margin-top: 8px; font-size: 0.88rem; color: var(--danger-text); background-color: var(--danger-bg); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--danger-border);">
+                    This will release the unit back to the public pool and trigger a cancellation notification.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('cancel-modal')">Keep Booking</button>
+                <button class="btn btn-danger" id="confirm-cancel-btn" onclick="executeCancellation()">Yes, Cancel Booking</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal (Configure AWS Endpoints) -->
+    <div id="settings-modal" class="modal-backdrop">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h4 class="modal-title">AWS Connection Settings</h4>
+                <button class="modal-close-btn" onclick="closeModal('settings-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Operation Mode</label>
+                    <select id="cfg-mock-mode" class="form-control" onchange="toggleConfigFields(this.value)">
+                        <option value="true">Demo Mode (Built-in Simulated Backend)</option>
+                        <option value="false">Live AWS (API Gateway & Cognito)</option>
+                    </select>
+                </div>
+                <div id="cfg-aws-fields" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">API Gateway Base URL</label>
+                        <input type="text" id="cfg-api-url" class="form-control" placeholder="https://xxxxxx.execute-api.af-south-1.amazonaws.com/Prod">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">AWS Region</label>
+                        <input type="text" id="cfg-region" class="form-control" placeholder="af-south-1" value="af-south-1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cognito User Pool ID</label>
+                        <input type="text" id="cfg-user-pool-id" class="form-control" placeholder="af-south-1_xxxxxxxxx">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cognito Client ID</label>
+                        <input type="text" id="cfg-client-id" class="form-control" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxx">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('settings-modal')">Close</button>
+                <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
