@@ -221,5 +221,6 @@ The next development stages are:
 6. Develop a frontend hosted with S3 and CloudFront.
 7. Deploy and test the complete application on AWS.
 
+https://github.com/Vicky9403/serverless-self-storage.git
 
 WTC-EG3B6BZH
